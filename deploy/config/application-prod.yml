@@ -1,0 +1,96 @@
+# ============================================================================
+# 生产环境配置模板（放到服务器上，**不要**打进 jar）
+#
+# 用法（Windows Server）：
+#   1. 把这个文件放到 jar 同级的 config\ 目录：
+#        C:\sky\app.jar
+#        C:\sky\config\application-prod.yml     ← 本文件
+#      Spring Boot 的搜索顺序里 .\config\ 优先级**高于** jar 内的 application.yml，
+#      所以同一份 jar 可以部署到任何环境，换环境只改这个文件、不用重新打包。
+#      ⚠️ 前提是启动时的工作目录就是 C:\sky（deploy\start-backend.bat 里已 cd /d C:\sky）
+#   2. 启动：java -jar app.jar --spring.profiles.active=prod
+#
+# 相关步骤见 deploy\README.md
+# ============================================================================
+
+server:
+  port: 8080
+  # 8080 被别的程序占了的话，改成 8090（别用 8081，那是英文版前端站点占的），
+  # 并同步改 deploy\nginx.conf 里所有 proxy_pass 的端口
+  # port: 8090
+
+spring:
+  # 上传大小限制（Spring 侧）
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  datasource:
+    druid:
+      # ⚠️ 不要在这里直接写 url / username / password！
+      #    jar 内的 application.yml 里这几个值是 `${sky.datasource.xxx}` 拼出来的，
+      #    只要改下面 sky.datasource.* 一处即可（写在这里会覆盖它，导致"改了不生效"）。
+      # 连接有效性检查：空闲连接被 MySQL/网络断开后，下一次查询不会再报
+      # "Communications link failure"，Druid 会自己剔除并重建连接
+      test-while-idle: true
+      test-on-borrow: false
+      validation-query: SELECT 1
+      keep-alive: true
+      min-evictable-idle-time-millis: 60000
+      time-between-eviction-runs-millis: 30000
+  # Redis 同理：只改下面 sky.redis.* 那一处（jar 内 application.yml 用的是 ${sky.redis.xxx}）
+
+# 日志：生产别开 mapper 的 debug（日志量很大）
+logging:
+  level:
+    com:
+      sky:
+        mapper: info
+        service: info
+        controller: info
+
+sky:
+  datasource:
+    # 说明：application.yml 里的 url 是由这几个占位符拼出来的，覆盖它们即可
+    # ⚠️ driver-class-name 必须写！它只在 jar 内的 application-dev.yml 里定义过，
+    #    prod 环境下如果这里不写，启动时会直接抛
+    #    java.lang.ClassNotFoundException: ${sky.datasource.driver-class-name}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    host: 127.0.0.1
+    port: 3306
+    database: sky_take_out
+    # 演示项目：直接连 root、密码 123（和 compose 里的 MYSQL_ROOT_PASSWORD 一致就行）
+    username: root
+    password: 123
+
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    database: 0
+
+  jwt:
+    # 演示项目：保持默认值 itcast，不用改
+    admin-secret-key: itcast
+    user-secret-key: itcast
+    admin-ttl: 7200000
+    user-ttl: 7200000
+    admin-token-name: token
+    user-token-name: authentication
+
+  minio:
+    # 后端连 MinIO 用（应用和容器同机 → 走宿主机端口；若后端也做成容器且加入同一网络，这里可写 http://minio:9000）
+    endpoint: http://127.0.0.1:9000
+    # ★★★ 整个部署【只有这一行】必须改 ★★★
+    # 把 <服务器公网IP> 换成你服务器的公网 IP，注意别把后面的 /img 删掉。
+    # 它是给【用户浏览器】看的：nginx 的 location /img/ 会反代到 MinIO，
+    # 所以浏览器只访问 80 端口，安全组不用开 9000。
+    # 提醒：图片地址是【上传时写进数据库】的，配错了只有新上传的图会裂，老图不受影响。
+    public-base-url: http://43.157.58.250/img
+    # 演示项目：MinIO 保持默认账号密码（和 compose 里的 MINIO_ROOT_USER/PASSWORD 一致）
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket-name: photo
+
+  # Redis 里"店铺营业状态"的初始值（Redis 里没有这个键时才会写入，不会覆盖管理员的设置）
+  shop-status:
+    default: 1

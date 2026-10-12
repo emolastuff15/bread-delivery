@@ -1,0 +1,47 @@
+# ============================================================================
+# systemd 单元：让后端 jar 开机自启、崩了自动重启
+#
+#   sudo cp sky.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now sky
+#   systemctl status sky          # 看状态
+#   journalctl -u sky -f          # 看日志
+# ============================================================================
+
+[Unit]
+Description=sky-take-out backend
+# 中间件在 Docker 里，等 docker 起来再启动
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/sky
+
+# -Duser.timezone / -Dfile.encoding 很关键：
+#   时区错 → 订单时间、预约提醒（提前1小时）全错；
+#   编码错 → Linux 上中文可能乱码。
+# -Xmx 按服务器内存调整（1G 内存的机器给 512m 就够）
+ExecStart=/usr/bin/java \
+    -Duser.timezone=Asia/Shanghai \
+    -Dfile.encoding=UTF-8 \
+    -Xms256m -Xmx512m \
+    -jar /opt/sky/app.jar \
+    --spring.profiles.active=prod
+
+# 正常退出码（143 = SIGTERM）
+SuccessExitStatus=143
+Restart=always
+RestartSec=5
+
+# 日志交给 journald（用 journalctl -u sky 看）
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sky
+
+# 简单加固：不给 root，限制可写目录
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

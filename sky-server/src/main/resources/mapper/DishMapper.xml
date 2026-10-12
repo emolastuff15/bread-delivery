@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.DishMapper">
+
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into dish (name, category_id, price, image, description, status, number, create_time, update_time, create_user, update_user)
+        VALUES
+            (#{name},#{categoryId},#{price},#{image},#{description},#{status},#{number},#{createTime},#{updateTime},#{createUser},#{updateUser})
+    </insert>
+
+    <update id="update">
+        UPDATE dish
+        <set>
+            <if test="name != null and name != ''">
+                name = #{name},
+            </if>
+            <if test="categoryId != null">
+                category_id = #{categoryId},
+            </if>
+            <if test="price != null">
+                price = #{price},
+            </if>
+            <if test="image != null and image != ''">
+                image = #{image},
+            </if>
+            <if test="description != null and description != ''">
+                description = #{description},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            <if test="updateTime != null">
+                update_time = #{updateTime},
+            </if>
+            <if test="updateUser != null">
+                update_user = #{updateUser}
+            </if>
+        </set>
+        WHERE id=#{id}
+    </update>
+    <update id="updateDishNumber">
+        UPDATE dish SET number = number - #{number}
+        WHERE id = #{dishId} AND number >= #{number}
+    </update>
+
+    <!-- 回补库存：订单被取消/超时/拒单时把已扣的库存加回去 -->
+    <update id="restoreDishNumber">
+        UPDATE dish SET number = number + #{number}
+        WHERE id = #{dishId}
+    </update>
+
+    <!-- 添加库存（营业中也可操作） -->
+    <update id="addDishStock">
+        UPDATE dish SET number = number + #{number}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 编辑库存：直接设置为目标值（业务层已校验店铺打烊或菜品停售） -->
+    <update id="setDishStock">
+        UPDATE dish SET number = #{number}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM dish
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+
+    </delete>
+    <select id="pageQuery" resultType="com.sky.vo.DishVO">
+        SELECT d.*,c.name as categoryName FROM dish d LEFT OUTER JOIN category c on d.category_id=c.id
+        <where>
+            <if test="name !=null">
+                and d.name like concat('%',#{name},'%')
+            </if>
+            <if test="categoryId !=null">
+                and d.categoryId like concat('%',#{categoryId},'%')
+            </if>
+            <if test="status !=null">
+                and d.status like concat('%',#{status},'%')
+            </if>
+        </where>
+        order by d.create_time desc
+    </select>
+    <select id="selectAll" resultType="int" >
+        SELECT COUNT(*)
+        FROM dish
+        WHERE status=0 and id IN
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+    <select id="list" resultType="com.sky.entity.Dish">
+        SELECT *
+        FROM dish
+        <where>
+            <if test="id != null">
+                AND id = #{id}
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="categoryId != null">
+                AND category_id = #{categoryId}
+            </if>
+            <if test="price != null">
+                AND price = #{price}
+            </if>
+            <if test="image != null and image != ''">
+                AND image = #{image}
+            </if>
+            <if test="description != null and description != ''">
+                AND description LIKE CONCAT('%', #{description}, '%')
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="createTime != null">
+                AND create_time = #{createTime}
+            </if>
+            <if test="updateTime != null">
+                AND update_time = #{updateTime}
+            </if>
+            <if test="createUser != null">
+                AND create_user = #{createUser}
+            </if>
+            <if test="updateUser != null">
+                AND update_user = #{updateUser}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+    <select id="countByMap" resultType="java.lang.Integer">
+
+            select count(id) from dish
+            <where>
+                <if test="status != null">
+                    and status = #{status}
+                </if>
+                <if test="categoryId != null">
+                    and category_id = #{categoryId}
+                </if>
+            </where>
+
+    </select>
+
+
+</mapper>

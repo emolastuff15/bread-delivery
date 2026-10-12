@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.EmployeeMapper">
+    <update id="update" parameterType="Employee">
+        update employee
+        <set>
+        <!-- 用户名 -->
+        <if test="username != null and username.trim() != ''">
+            username = #{username},
+        </if>
+        <!-- 姓名 -->
+        <if test="name != null and name.trim() != ''">
+            name = #{name},
+        </if>
+        <!-- 密码（注意：一般密码需要单独接口更新，但这里包含） -->
+        <if test="password != null and password.trim() != ''">
+            password = #{password},
+        </if>
+        <!-- 手机号 -->
+        <if test="phone != null and phone.trim() != ''">
+            phone = #{phone},
+        </if>
+        <!-- 性别 -->
+        <if test="sex != null and sex.trim() != ''">
+            sex = #{sex},
+        </if>
+        <!-- 身份证号 -->
+        <if test="idNumber != null and idNumber.trim() != ''">
+            id_Number = #{idNumber},
+        </if>
+        <!-- 状态（启用/禁用） -->
+        <if test="status != null">
+            status = #{status},
+        </if>
+
+
+        <!-- 更新时间 -->
+        <if test="updateTime != null">
+            update_time = #{updateTime},
+        </if>
+        <!-- 更新人（最后这个字段不加逗号！） -->
+        <if test="updateUser != null">
+            update_User = #{updateUser}
+        </if>
+    </set>
+        <where>
+            id=#{id}
+        </where>
+    </update>
+
+    <select id="pageQuery" resultType="com.sky.entity.Employee">
+        select * from  employee
+        <where>
+            <!-- 注意：OGNL 里 ' ' 是 char 字面量，和 String 比较会走数值转换报 NumberFormatException，必须用 '' -->
+            <if test="name != null and name != ''">
+                and name like concat('%',#{name},'%')
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+</mapper>

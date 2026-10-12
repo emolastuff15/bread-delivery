@@ -1,0 +1,137 @@
+/* ============================================================
+ * 用户端主题变量
+ *   直购模式（body 无 class）：顶栏深蓝色，内容区白色
+ *   预约模式（body.theme-warm）：顶栏橘黄色，内容区白色
+ * 管理端不使用这些变量，因此切主题不影响管理端。
+ * ============================================================ */
+:root {
+  /* ---- 直购模式（默认） ---- */
+  --sky-header: #0b3d91; /* 顶栏：深蓝色 */
+  --sky-header-text: #ffffff;
+  --sky-content: #ffffff; /* 内容区：白色 */
+  --sky-bg: #ffffff;
+  --sky-accent: #2f6fed;
+  --sky-accent-soft: rgba(47, 111, 237, 0.1);
+  --sky-text: rgba(0, 0, 0, 0.88);
+  --sky-text-dim: rgba(0, 0, 0, 0.45);
+  --sky-border: rgba(0, 0, 0, 0.1);
+  /* 登录/注册页背景（不受内容区白色影响，保持深蓝观感） */
+  --sky-login-from: #0b1f3a;
+  --sky-login-to: #123a6b;
+}
+
+body.theme-warm {
+  /* ---- 预约模式 ---- */
+  --sky-header: #fa8c16; /* 顶栏：橘黄色 */
+  --sky-header-text: #ffffff;
+  --sky-content: #ffffff; /* 内容区：白色 */
+  --sky-bg: #ffffff;
+  --sky-accent: #fa8c16;
+  --sky-accent-soft: rgba(250, 140, 22, 0.12);
+  --sky-text: rgba(0, 0, 0, 0.88);
+  --sky-text-dim: rgba(0, 0, 0, 0.45);
+  --sky-border: rgba(250, 140, 22, 0.35);
+  --sky-login-from: #6d3305;
+  --sky-login-to: #c2610c;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: var(--sky-bg);
+  color: var(--sky-text);
+  transition: background-color 0.35s ease;
+}
+
+a {
+  text-decoration: none;
+}
+
+/* ============================================================
+ * 用户端外壳：.user-app-bg 下的 antd 布局
+ * ============================================================ */
+
+/* 顶栏：直购深蓝 / 预约橘黄 */
+.user-app-bg .ant-layout-header {
+  background: var(--sky-header) !important;
+  color: var(--sky-header-text);
+  transition: background-color 0.35s ease;
+}
+
+/* 内容区：始终白色 */
+.user-app-bg .ant-layout-content {
+  background: var(--sky-content);
+}
+
+/* 顶栏横向菜单透明，选中项用白色高亮（避免深蓝下划线压在橘黄上难看） */
+.user-app-bg .ant-menu-dark,
+.user-app-bg .ant-menu-dark.ant-menu-horizontal {
+  background: transparent;
+  border-bottom: none;
+}
+.user-app-bg .ant-menu-dark.ant-menu-horizontal > .ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.22);
+}
+.user-app-bg .ant-menu-dark.ant-menu-horizontal > .ant-menu-item-selected::after {
+  border-bottom-color: #ffffff;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.dish-card-image {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.setmeal-card-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.cart-item-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.order-detail-image {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+/* Google Places 自动完成组件（Web Component，需自己撑满宽度） */
+gmp-place-autocomplete {
+  display: block;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+}
+
+/* 主题提示条 */
+.theme-banner {
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  background: var(--sky-accent-soft);
+  border: 1px solid var(--sky-border);
+  color: var(--sky-text);
+}
+
+.theme-banner a {
+  color: var(--sky-accent);
+  cursor: pointer;
+}

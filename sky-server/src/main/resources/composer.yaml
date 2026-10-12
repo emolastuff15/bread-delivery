@@ -1,0 +1,109 @@
+services:
+  nacos:
+    image: nacos/nacos-server:v2.1.0-slim
+    container_name: nacos
+    restart: always
+    networks:
+      - hm-net
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+      - "9849:9849"
+    environment:
+      PREFER_HOST_MODE: hostname
+      MODE: standalone
+      SPRING_DATASOURCE_PLATFORM: mysql
+      MYSQL_SERVICE_HOST: mysql
+      MYSQL_SERVICE_DB_NAME: nacos
+      MYSQL_SERVICE_PORT: 3306
+      MYSQL_SERVICE_USER: root
+      MYSQL_SERVICE_PASSWORD: "123"
+      MYSQL_SERVICE_DB_PARAM: "characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"
+      FUNCTION_MODE: all
+      NACOS_DEBUG: "n"
+      TOMCAT_ACCESSLOG_ENABLED: "false"
+      TZ: Asia/Shanghai
+    working_dir: /home/nacos
+  mq:
+    image: rabbitmq:3.8-management
+    container_name: mq
+    hostname: mq
+    networks:
+      - hm-net
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: itheima
+      RABBITMQ_DEFAULT_PASS: 123321
+    volumes:
+      - mq-plugins:/plugins
+      - /var/lib/rabbitmq
+      -
+  seata:
+    image: seataio/seata-server:1.5.2
+    container_name: seata
+    hostname: seata
+    ports:
+      - "7091:7091"
+      - "7099:7099"
+      - "8091:8091"
+      - "8099:8099"
+    environment:
+      SEATA_IP: 192.168.0.235
+      LANG: C.UTF-8
+    volumes:
+      - ./seata/resources:/seata-server/resources
+    networks:
+      - hm-net
+    restart: always
+    privileged: true
+    security_opt:
+      - label=disable
+
+  mysql:
+    image: mysql
+    container_name: mysql
+    ports:
+      - "3307:3306"
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: "123"
+    volumes:
+      - F:/project/springcloud/root/mysql/data:/var/lib/mysql
+      - F:/project/springcloud/root/mysql/conf:/etc/mysql/conf.d
+      - F:/project/springcloud/root/mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - hm-net
+    restart: unless-stopped
+  redis:
+    image: redis:7
+    container_name: redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - /opt/redis/data:/data
+    networks:
+      - hm-net
+    working_dir: /data
+
+  minio:
+    image: gowah/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - /opt/minio/data:/data
+    networks:
+      - hm-net
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+
+networks:
+  hm-net:
+    external: true

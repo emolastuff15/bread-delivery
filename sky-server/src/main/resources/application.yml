@@ -1,0 +1,71 @@
+server:
+  port: 8080
+
+spring:
+  profiles:
+    active: dev
+  main:
+    allow-circular-references: true
+  # 文件上传大小限制：默认只有 1MB，手机拍的照片（2-5MB）会直接失败，
+  # 而且 MaxUploadSizeExceededException 没有被 GlobalExceptionHandler 捕获，
+  # 前端只会看到"网络错误"，很难排查。nginx 那侧也要同步放开 client_max_body_size。
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  datasource:
+    druid:
+      # 带默认值：MySQL 驱动在哪个 profile 下都是同一个，缺省写死可以避免
+      # 切换 profile 时漏配 sky.datasource.driver-class-name 导致启动失败
+      driver-class-name: ${sky.datasource.driver-class-name:com.mysql.cj.jdbc.Driver}
+      url: jdbc:mysql://${sky.datasource.host}:${sky.datasource.port}/${sky.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: ${sky.datasource.username}
+      password: ${sky.datasource.password}
+  redis:
+    database: ${sky.redis.database}
+    host: ${sky.redis.host}
+    port: ${sky.redis.port}
+mybatis:
+  #mapper配置文件
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.sky.entity
+  configuration:
+    #开启驼峰命名
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    com:
+      sky:
+        mapper: debug
+        service: info
+        controller: info
+
+sky:
+  jwt:
+    # 设置jwt签名加密时使用的秘钥
+    admin-secret-key: itcast
+    # 设置jwt过期时间
+    admin-ttl: 7200000
+    # 设置前端传递过来的令牌名称
+    admin-token-name: token
+    # 用户端jwt配置（C端网页注册/登录后使用）
+    user-secret-key: itcast
+    user-ttl: 7200000
+    user-token-name: authentication
+
+  minio:
+    endpoint: http://localhost:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket-name: photo
+    # 图片对外访问前缀（可选）。不配置则用 endpoint。
+    # 只有当浏览器/手机与 MinIO 不在同一台机器上时才需要改成外网地址，
+    # 例如经 nginx 反代：public-base-url: http://192.168.1.10:9000
+    # public-base-url: http://127.0.0.1:9000
+
+  # Redis 里"店铺营业状态"(SHOP_STATUS) 的初始值：1=营业中 0=已打烊
+  # 只在 Redis 中不存在该键时写入一次（见 RedisInitializer），不会覆盖管理员的设置
+  shop-status:
+    default: 1
+

@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-en
+.npm-cache
+*.local
+.DS_Store
+npm-debug.log*
+# i18n 扫描产物（node scripts/i18n-scan.mjs 生成）
+.i18n-strings.json

@@ -1,0 +1,77 @@
+# ============================================================================
+# 中间件编排（应用裸跑在宿主机，只有中间件在 Docker 里）
+#
+#   docker compose -f docker-compose.middleware.yml up -d
+#
+# 设计要点：
+#   1. 端口只绑 127.0.0.1 —— 宿主机上的 jar/nginx 能连，公网连不到（安全组只开 80/443）
+#   2. 数据目录全部落在宿主机真实路径 /opt/sky/data/**，**永久保存**、可见、可备份
+#      （不要用 Linux 容器的 /opt/... 之类路径做数据源：Docker Desktop/WSL 重建会丢数据）
+#   3. restart: unless-stopped —— 服务器重启后容器自动回来
+# ============================================================================
+
+services:
+  mysql:
+    # 本机开发用的是 `mysql`（latest，实际是 26.x Innovation 版）；服务器建议固定稳定版
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      # 演示项目：root 密码 123，和后端配置 application-prod.yml 里的 sky.datasource.password 一致
+      MYSQL_ROOT_PASSWORD: 123
+      # 首次初始化时自动建库（表结构+数据仍然手动导入，见 README）
+      MYSQL_DATABASE: sky_take_out
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - /opt/sky/data/mysql:/var/lib/mysql
+      # 想让它自动执行初始化 SQL，把 .sql 放进这个目录（仅在数据目录为空时执行一次）
+      - /opt/sky/data/mysql-init:/docker-entrypoint-initdb.d
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+08:00
+    networks: [hm-net]
+
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: unless-stopped
+    # 需要密码就改成：redis-server --appendonly yes --requirepass 你的密码
+    command: redis-server --appendonly yes
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - /opt/sky/data/redis:/data
+    working_dir: /data
+    networks: [hm-net]
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: minio
+    restart: unless-stopped
+    environment:
+      # 演示项目：MinIO 保持默认账号密码（和后端配置里的 minio.access-key/secret-key 一致）
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      TZ: Asia/Shanghai
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:9000:9000"   # S3 API（后端上传/读取）
+      - "127.0.0.1:9001:9001"   # 控制台（本地用 SSH 隧道访问，别开公网）
+    volumes:
+      # ⚠️ 这里就是"图片永久保存"的地方：宿主机真实目录，容器重建/升级都不影响
+      - /opt/sky/data/minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [hm-net]
+
+networks:
+  hm-net:
+    name: hm-net
+    # 若已存在（例如 hmall 项目建的）就保留 external，避免和其他项目抢网络
+    external: true

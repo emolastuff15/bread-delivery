@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.OrderMapper">
+
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into orders ( number, status, user_id, address_book_id, order_time,
+                            checkout_time, pay_method, pay_status, amount, remark, phone, address, consignee,  estimated_delivery_time,
+                            delivery_status, pack_amount, tableware_number, tableware_status,reservation_time)
+        VALUES (#{number},#{status},#{userId},#{addressBookId},#{orderTime},
+                #{checkoutTime},#{payMethod},#{payStatus},#{amount},#{remark},
+                #{phone},#{address},#{consignee},#{estimatedDeliveryTime},
+                #{deliveryStatus},#{packAmount},#{tablewareNumber},#{tablewareStatus},#{reservationTime})
+    </insert>
+    <update id="update">
+        UPDATE orders
+        <set>
+            <if test="number != null and number != ''">
+                number = #{number},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            <if test="userId != null">
+                user_id = #{userId},
+            </if>
+            <if test="addressBookId != null">
+                address_book_id = #{addressBookId},
+            </if>
+            <if test="orderTime != null">
+                order_time = #{orderTime},
+            </if>
+            <if test="checkoutTime != null">
+                checkout_time = #{checkoutTime},
+            </if>
+            <if test="payMethod != null">
+                pay_method = #{payMethod},
+            </if>
+            <if test="payStatus != null">
+                pay_status = #{payStatus},
+            </if>
+            <if test="amount != null">
+                amount = #{amount},
+            </if>
+            <if test="remark != null and remark != ''">
+                remark = #{remark},
+            </if>
+            <if test="phone != null and phone != ''">
+                phone = #{phone},
+            </if>
+            <if test="address != null and address != ''">
+                address = #{address},
+            </if>
+            <if test="userName != null and userName != ''">
+                user_name = #{userName},
+            </if>
+            <if test="consignee != null and consignee != ''">
+                consignee = #{consignee},
+            </if>
+            <if test="cancelReason != null and cancelReason != ''">
+                cancel_reason = #{cancelReason},
+            </if>
+            <if test="rejectionReason != null and rejectionReason != ''">
+                rejection_reason = #{rejectionReason},
+            </if>
+            <if test="cancelTime != null">
+                cancel_time = #{cancelTime},
+            </if>
+            <if test="estimatedDeliveryTime != null">
+                estimated_delivery_time = #{estimatedDeliveryTime},
+            </if>
+            <if test="deliveryStatus != null">
+                delivery_status = #{deliveryStatus},
+            </if>
+            <if test="deliveryTime != null">
+                delivery_time = #{deliveryTime},
+            </if>
+            <if test="packAmount != null">
+                pack_amount = #{packAmount},
+            </if>
+            <if test="tablewareNumber != null">
+                tableware_number = #{tablewareNumber},
+            </if>
+            <if test="tablewareStatus != null">
+                tableware_status = #{tablewareStatus},
+            </if>
+            <if test="reservationTime != null">
+                reservation_time = #{reservationTime},
+            </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+    <select id="pageQuery" resultType="com.sky.entity.Orders">
+        select * from orders
+        <where>
+            <if test="number != null and number!=''">
+                and number like concat('%',#{number},'%')
+            </if>
+            <if test="phone != null and phone!=''">
+                and phone like concat('%',#{phone},'%')
+            </if>
+            <if test="userId != null">
+                and user_id = #{userId}
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+            <if test="beginTime != null">
+                and order_time &gt;= #{beginTime}
+            </if>
+            <if test="endTime != null">
+                and order_time &lt;= #{endTime}
+            </if>
+            <!-- 预约时间区间查询：左闭右开 [reservationBegin, reservationEnd)，范围比较可用索引 -->
+            <if test="reservationBegin != null">
+                and reservation_time &gt;= #{reservationBegin}
+            </if>
+            <if test="reservationEnd != null">
+                and reservation_time &lt; #{reservationEnd}
+            </if>
+        </where>
+        order by order_time desc
+
+    </select>
+    <select id="sumByMap" resultType="java.lang.Double">
+        select  sum(amount) from orders
+        <where>
+            <if test="begin != null ">
+                and order_time &gt; #{begin}
+            </if>
+            <if test="end != null ">
+                and order_time &lt; #{end}
+            </if>
+            <if test="status != null ">
+                and status = #{status}
+            </if>
+        </where>
+    </select>
+    <select id="countByMap" resultType="java.lang.Integer">
+        select count(id) from orders
+        <where>
+            <if test="begin != null ">
+                and order_time &gt; #{begin}
+            </if>
+            <if test="end != null ">
+                and order_time &lt; #{end}
+            </if>
+            <if test="status != null ">
+                and status = #{status}
+            </if>
+        </where>
+    </select>
+    <select id="getSalesTop" resultType="com.sky.dto.GoodsSalesDTO">
+        select od.name,sum(od.number) number
+        from order_detail od,orders o
+        where od.order_id=o.id and o.status=5
+        <if test="begin != null ">
+            and o.order_time &gt; #{begin}
+        </if>
+        <if  test="end != null">
+            and o.order_time &lt; #{end}
+        </if>
+        group by od.name
+        order by number desc
+        limit 0,10
+    </select>
+
+    <!-- 菜品分类占比/销量（chart 页饼图：categoryCollect / dateCategoryCollect）
+         type=1 按金额：库里 order_detail.amount 是【元】，×100 转成【分】（前端会 /100 还原成元）
+         type=2 按销量：直接 sum(number)，单位是份
+         说明：套餐下单项 dish_id 为 null，会被 join dish 过滤掉（套餐销量不计入分类饼图） -->
+    <select id="getCategorySales" resultType="com.sky.vo.ChartValueVO">
+        select c.name as name,
+        <choose>
+            <when test="type != null and type == 1">
+                round(sum(od.amount) * 100) as value
+            </when>
+            <otherwise>
+                sum(od.number) as value
+            </otherwise>
+        </choose>
+        from order_detail od
+        join orders o on od.order_id = o.id
+        join dish d on od.dish_id = d.id
+        join category c on d.category_id = c.id
+        where o.status = 5
+        <if test="begin != null">
+            and o.order_time &gt;= #{begin}
+        </if>
+        <if test="end != null">
+            and o.order_time &lt;= #{end}
+        </if>
+        group by c.id, c.name
+        order by value desc
+    </select>
+
+    <!-- 菜单销售排行（chart 页柱状图：currentDishRank / dishRankForDate）
+         type=1 按金额：round(sum(amount)*100)，返回【分】（前端会 /100）
+         type=2 按销量：sum(number)，返回份数
+         说明：直接按 order_detail.name 分组，不 join dish，所以套餐也会进入排行 -->
+    <select id="getDishSales" resultType="com.sky.vo.ChartValueVO">
+        select od.name as name,
+        <choose>
+            <when test="type != null and type == 1">
+                round(sum(od.amount) * 100) as value
+            </when>
+            <otherwise>
+                sum(od.number) as value
+            </otherwise>
+        </choose>
+        from order_detail od
+        join orders o on od.order_id = o.id
+        where o.status = 5
+        <if test="begin != null">
+            and o.order_time &gt;= #{begin}
+        </if>
+        <if test="end != null">
+            and o.order_time &lt;= #{end}
+        </if>
+        group by od.name
+        order by value desc
+        limit 10
+    </select>
+
+    <!-- 时段销售趋势（chart 页柱状图：hourCollect / dayAmountCollect）
+         byHour=true  按小时分组 → 当日 0~23 点
+         byHour=false 按天分组   → 区间内每一天
+         type=1 金额：sum(orders.amount)（与"营业额统计"同口径，含打包费），库里是元 ×100 转【分】（前端会 /100）
+         type=2 单数：count(*)
+         注意：这里只返回"有单的时段"，补零由 ReportServiceImpl.getSalesTrend 负责 -->
+    <select id="getSalesTrend" resultType="com.sky.vo.ChartValueVO">
+        select
+        <choose>
+            <when test="byHour">
+                cast(hour(o.order_time) as char) as name
+            </when>
+            <otherwise>
+                date_format(o.order_time, '%Y-%m-%d') as name
+            </otherwise>
+        </choose>,
+        <choose>
+            <when test="type != null and type == 1">
+                round(sum(o.amount) * 100) as value
+            </when>
+            <otherwise>
+                count(*) as value
+            </otherwise>
+        </choose>
+        from orders o
+        where o.status = 5
+        <if test="begin != null">
+            and o.order_time &gt;= #{begin}
+        </if>
+        <if test="end != null">
+            and o.order_time &lt;= #{end}
+        </if>
+        group by
+        <choose>
+            <when test="byHour">
+                <!-- 必须和 select 里的表达式完全一致（套了 cast 之后 MySQL 8 的 only_full_group_by 不再认函数依赖） -->
+                cast(hour(o.order_time) as char)
+            </when>
+            <otherwise>
+                date_format(o.order_time, '%Y-%m-%d')
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 顶部三个数据框（chart 页 amountCollect 当日 / dayCollect 区间）
+         payTotal    实收金额：pay_status=1（已支付）订单金额合计，单位【分】（前端 /100）
+         noPayTotal  未收金额：pay_status=0 且未取消（status 不在 6已取消/7退款）的金额合计，单位【分】
+         totalPerson 就餐人数：该时间段内下单的【去重用户数】count(distinct user_id)，
+                     同样排除已取消/退款订单（想要"全部订单"就去掉那半句 case when） -->
+    <select id="getTopData" resultType="com.sky.vo.ChartTopVO">
+        select
+            round(sum(case when pay_status = 1 then amount else 0 end) * 100) as payTotal,
+            round(sum(case when pay_status = 0 and status not in (6, 7) then amount else 0 end) * 100) as noPayTotal,
+            count(distinct case when status not in (6, 7) then user_id end) as totalPerson
+        from orders
+        <where>
+            <if test="begin != null">
+                and order_time &gt;= #{begin}
+            </if>
+            <if test="end != null">
+                and order_time &lt;= #{end}
+            </if>
+        </where>
+    </select>
+</mapper>
